@@ -23,7 +23,7 @@ class ExtendsAndAdditionalPropertiesTest < Test::Unit::TestCase
       end
 
       def test_#{schema_name}_valid_inner
-        assert_valid '#{schema_name}', "outerB"=>{"innerA"=>true}
+        assert_valid '#{schema_name}', "outerB"=>[{"innerA"=>true}]
       end
 
       def test_#{schema_name}_invalid_outer
@@ -31,7 +31,7 @@ class ExtendsAndAdditionalPropertiesTest < Test::Unit::TestCase
       end
 
       def test_#{schema_name}_invalid_inner
-        refute_valid '#{schema_name}', "outerB"=>{"whaaaaat"=>true}
+        refute_valid '#{schema_name}', "outerB"=>[{"whaaaaat"=>true}]
       end
     EOB
   end
