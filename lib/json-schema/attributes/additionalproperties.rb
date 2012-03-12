@@ -10,19 +10,21 @@ module JSON
 
           extra_properties = remove_valid_properties(extra_properties, current_schema, validator)
 
-          # TODO extended additionalProperties aren't currently validated
-          if current_schema.schema['additionalProperties'] == false && !extra_properties.empty?
-            message = "The property '#{build_fragment(fragments)}' contains additional properties #{extra_properties.inspect} outside of the schema when none are allowed"
-            validation_error(message, fragments, current_schema, self, options[:record_errors])
-          elsif current_schema.schema['additionalProperties'].is_a?(Hash)
-            extra_properties.each do |key|
-              schema = JSON::Schema.new(current_schema.schema['additionalProperties'],current_schema.uri,validator)
+          addprop= current_schema.schema['additionalProperties']
+          if addprop.is_a?(Hash)
+            schema = JSON::Schema.new(addprop,current_schema.uri,validator)
+            matching_properties= extra_properties & addprop.keys
+            matching_properties.each do |key|
               fragments << key
               schema.validate(data[key],fragments,options)
               fragments.pop
             end
+            extra_properties -= matching_properties
           end
-
+          if !extra_properties.empty? and (addprop == false or (addprop.is_a?(Hash) and !addprop.empty?))
+            message = "The property '#{build_fragment(fragments)}' contains additional properties #{extra_properties.inspect} outside of the schema when none are allowed"
+            validation_error(message, fragments, current_schema, self, options[:record_errors])
+          end
         end
       end
 
