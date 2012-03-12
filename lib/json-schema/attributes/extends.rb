@@ -5,9 +5,26 @@ module JSON
         schemas = current_schema.schema['extends']
         schemas = [schemas] if !schemas.is_a?(Array)
         schemas.each do |s|
-          if s.is_a?(Hash)
-            schema = JSON::Schema.new(s,current_schema.uri,validator)
+          uri,schema= get_extended_uri_and_schema(s, current_schema, validator)
+          if schema
             schema.validate(data, fragments, options)
+          else
+            if uri
+              message = "The extended schema '#{uri.to_s}' cannot be found"
+              validation_error(message, fragments, current_schema, self, options[:record_errors])
+            else
+              message = "The property '#{build_fragment(fragments)}' was not a valid schema"
+              validation_error(message, fragments, current_schema, self, options[:record_errors])
+            end
+          end
+        end
+      end
+
+      def self.get_extended_uri_and_schema(s, current_schema, validator)
+        schema=nil, uri=nil
+          if s.is_a?(Hash)
+            uri = current_schema.uri
+            schema = JSON::Schema.new(s,uri,validator)
           elsif s.is_a?(String)
             temp_uri = URI.parse(s)
             if temp_uri.relative?
@@ -24,6 +41,7 @@ module JSON
               temp_uri.fragment = s.split("#")[1]
             end
             temp_uri.fragment = "" if temp_uri.fragment.nil?
+            uri = temp_uri
 
             # Grab the parent schema from the schema list
             schema_key = temp_uri.to_s.split("#")[0] + "#"
@@ -33,7 +51,7 @@ module JSON
             if ref_schema
               # Perform fragment resolution to retrieve the appropriate level for the schema
               target_schema = ref_schema.schema
-              fragments = temp_uri.fragment.split("/")
+              fragments = uri.fragment.split("/")
               fragment_path = ''
               fragments.each do |fragment|
                 if fragment && fragment != ''
@@ -50,17 +68,10 @@ module JSON
               end
 
               # We have the schema finally, build it and validate!
-              schema = JSON::Schema.new(target_schema,temp_uri,validator)
-              schema.validate(data, fragments, options)
-            else
-              message = "The extended schema '#{temp_uri.to_s}' cannot be found"
-              validation_error(message, fragments, current_schema, self, options[:record_errors])
+              schema = JSON::Schema.new(target_schema,uri,validator)
             end
-          else
-            message = "The property '#{build_fragment(fragments)}' was not a valid schema"
-            validation_error(message, fragments, current_schema, self, options[:record_errors])
           end
-        end
+          [uri,schema]
       end
     end
   end
